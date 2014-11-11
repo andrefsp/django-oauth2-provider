@@ -53,7 +53,12 @@ class RequestParamsClientBackend(object):
         if request is None:
             return None
 
-        form = ClientAuthForm(request.REQUEST)
+        if hasattr(request, 'data'):
+            form = ClientAuthForm(request.data)
+        elif hasattr(request, 'REQUEST'):
+            form = ClientAuthForm(request.REQUEST)
+        else:
+            return None
 
         if form.is_valid():
             return form.cleaned_data.get('client')
@@ -74,7 +79,12 @@ class PublicPasswordBackend(object):
         if request is None:
             return None
 
-        form = PublicPasswordGrantForm(request.REQUEST)
+        if hasattr(request, 'data'):
+            form = PublicPasswordGrantForm(request.data)
+        elif hasattr(request, 'REQUEST'):
+            form = PublicPasswordGrantForm(request.REQUEST)
+        else:
+            return None
 
         if form.is_valid():
             return form.cleaned_data.get('client')

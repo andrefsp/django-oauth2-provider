@@ -558,6 +558,20 @@ class AccessToken(OAuthView, Mixin):
             return self.password
         return None
 
+    def get_data(self, request):
+        mimetypes = {
+                'application/json': json.loads
+                }
+        content_type = request.META.get('CONTENT_TYPE', '').split(';')[0]
+        if content_type and content_type in mimetypes:
+            try:
+                return mimetypes[content_type](request.body)
+            except (TypeError, ValueError):
+                raise OAuthError({
+                    'error': 'invalid_request',
+                    'error_description': _('Invalid JSON found on request')})
+        return request.POST
+
     def get(self, request):
         """
         As per :rfc:`3.2` the token endpoint *only* supports POST requests.
@@ -576,13 +590,18 @@ class AccessToken(OAuthView, Mixin):
                 'error': 'invalid_request',
                 'error_description': _("A secure connection is required.")})
 
-        if not 'grant_type' in request.POST:
+        try:
+             setattr(request, 'data', self.get_data(request))
+        except OAuthError, e:
+            return self.error_response(e.args[0])
+
+        if not 'grant_type' in request.data:
             return self.error_response({
                 'error': 'invalid_request',
                 'error_description': _("No 'grant_type' included in the "
                     "request.")})
 
-        grant_type = request.POST['grant_type']
+        grant_type = request.data['grant_type']
 
         if grant_type not in self.grant_types:
             return self.error_response({'error': 'unsupported_grant_type'})
@@ -595,6 +614,6 @@ class AccessToken(OAuthView, Mixin):
         handler = self.get_handler(grant_type)
 
         try:
-            return handler(request, request.POST, client)
+            return handler(request, request.data, client)
         except OAuthError, e:
             return self.error_response(e.args[0])
