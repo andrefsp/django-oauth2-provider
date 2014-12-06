@@ -477,6 +477,8 @@ class AccessToken(OAuthView, Mixin):
             'token_type': constants.TOKEN_TYPE,
             'expires_in': access_token.get_expire_delta(),
             'scope': ' '.join(scope.names(access_token.scope)),
+            'username': access_token.user.username,
+            'user_id': access_token.user.pk,
         }
 
         # Not all access_tokens are given a refresh_token
