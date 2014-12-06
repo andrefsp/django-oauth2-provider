@@ -343,6 +343,65 @@ class Redirect(OAuthView, Mixin):
         return HttpResponseRedirect(redirect_uri)
 
 
+class RevokeToken(OAuthView, Mixin):
+
+
+    def revoke_access_token(self, access_token, token_type, client):
+        raise NotImplementedError()
+
+    def revoke_access_token_response(self, access_token):
+        response_data = {}
+        if access_token.token:
+            response_data['access_token'] = access_token.token
+        return HttpResponse(
+            json.dumps(response_data), content_type='application/json'
+        )
+
+    def revoke(self, data, client):
+        access_token = data.get('access_token')
+        if not access_token:
+            raise OAuthError({
+                'error': 'invalid_request',
+                'error_description': _('No access token found')})
+        at = self.revoke_access_token(access_token, client)
+        return self.revoke_access_token_response(at)
+
+    def get_data(self, request):
+        mimetypes = {
+                'application/json': json.loads
+                }
+        content_type = request.META.get('CONTENT_TYPE', '').split(';')[0]
+        if content_type and content_type in mimetypes:
+            try:
+                return mimetypes[content_type](request.body)
+            except (TypeError, ValueError):
+                raise OAuthError({
+                    'error': 'invalid_request',
+                    'error_description': _('Invalid JSON found on request')})
+        return request.POST
+
+    def post(self, request):
+        """
+        As per :rfc:`3.2` the token endpoint *only* supports POST requests.
+        """
+        if constants.ENFORCE_SECURE and not request.is_secure():
+            return self.error_response({
+                'error': 'invalid_request',
+                'error_description': _("A secure connection is required.")})
+
+        try:
+             setattr(request, 'data', self.get_data(request))
+        except OAuthError, e:
+            return self.error_response(e.args[0])
+
+        client = self.authenticate(request)
+
+        try:
+            return self.revoke(request.data, client)
+        except OAuthError, e:
+            return self.error_response(e.args[0])
+
+
 class AccessToken(OAuthView, Mixin):
     """
     :attr:`AccessToken` handles creation and refreshing of access tokens.

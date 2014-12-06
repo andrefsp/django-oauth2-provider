@@ -97,9 +97,14 @@ class AccessTokenBackend(object):
     Authenticate a user via access token and client object.
     """
 
-    def authenticate(self, access_token=None, client=None):
-        try:
-            return AccessToken.objects.get(token=access_token,
-                expires__gt=now(), client=client)
-        except AccessToken.DoesNotExist:
-            return None
+    def authenticate(self, request):
+        auth = request.META.get('HTTP_AUTHORIZATION')
+        if auth:
+            auth_type, access_token = auth.split()
+            if auth_type.lower() != 'bearer':
+                return None
+            try:
+                return AccessToken.objects.get(token=access_token,
+                    expires__gt=now())
+            except AccessToken.DoesNotExist:
+                return None

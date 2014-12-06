@@ -2,13 +2,13 @@ from datetime import timedelta
 from django.core.urlresolvers import reverse
 from .. import constants
 from ..views import Capture, Authorize, Redirect
-from ..views import AccessToken as AccessTokenView, OAuthError
+from ..views import AccessToken as AccessTokenView, RevokeToken as RevokeTokenView, OAuthError
 from ..utils import now
 from .forms import AuthorizationRequestForm, AuthorizationForm
 from .forms import PasswordGrantForm, RefreshTokenGrantForm
 from .forms import AuthorizationCodeGrantForm
 from .models import Client, RefreshToken, AccessToken
-from .backends import BasicClientBackend, RequestParamsClientBackend, PublicPasswordBackend
+from .backends import BasicClientBackend, RequestParamsClientBackend, PublicPasswordBackend, AccessTokenBackend
 
 
 class Capture(Capture):
@@ -57,6 +57,25 @@ class Redirect(Redirect):
     Implementation of :class:`provider.views.Redirect`
     """
     pass
+
+class RevokeTokenView(RevokeTokenView):
+
+    authentication = (
+        BasicClientBackend,
+        RequestParamsClientBackend,
+        PublicPasswordBackend,
+        AccessTokenBackend
+    )
+
+    def revoke_access_token(self, token, client):
+        try:
+            at = AccessToken.objects.get(token=token)
+        except AccessToken.DoesNotExist:
+            at = AccessToken()
+        else:
+            at.expires = now() - timedelta(days=1)
+            at.save()
+        return at
 
 
 class AccessTokenView(AccessTokenView):
