@@ -71,7 +71,7 @@ class RevokeTokenView(RevokeTokenView):
         try:
             at = AccessToken.objects.get(token=token)
         except AccessToken.DoesNotExist:
-            at = AccessToken()
+            at = AccessToken(token=None)
         else:
             at.expires = now() - timedelta(days=1)
             at.save()

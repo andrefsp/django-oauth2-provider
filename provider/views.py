@@ -346,6 +346,15 @@ class Redirect(OAuthView, Mixin):
 class RevokeToken(OAuthView, Mixin):
 
 
+    def error_response(self, error, content_type='application/json', status=400,
+            **kwargs):
+        """
+        Return an error response to the client with default status code of
+        *400* stating the error as outlined in :rfc:`5.2`.
+        """
+        return HttpResponse(json.dumps(error), content_type=content_type,
+                status=status, **kwargs)
+
     def revoke_access_token(self, access_token, token_type, client):
         raise NotImplementedError()
 
@@ -362,7 +371,7 @@ class RevokeToken(OAuthView, Mixin):
         if not access_token:
             raise OAuthError({
                 'error': 'invalid_request',
-                'error_description': _('No access token found')})
+                'error_description': _('No access token found on request')})
         at = self.revoke_access_token(access_token, client)
         return self.revoke_access_token_response(at)
 
