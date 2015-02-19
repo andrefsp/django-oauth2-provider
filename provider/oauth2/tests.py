@@ -364,6 +364,26 @@ class AccessTokenTest(BaseOAuth2TestCase):
         self.assertEqual('invalid_grant', json.loads(response.content)['error'],
             response.content)
 
+    def test_facebook_token_grant_public_json(self):
+        c = self.get_client()
+        c.client_type = 1 # public
+        c.save()
+        u = self.get_user()
+        u.facebook_id = '100'
+        u.facebook_access_token = 'XXX'
+        u.save()
+        response = self.client.post(self.access_token_url(), data={
+                'grant_type': 'facebook_access_token',
+                'client_id': c.client_id,
+                'client_secret': c.client_secret,
+                # No secret needed
+                'facebook_id': 1,
+                'facebook_access_token': 'XXX'
+            })
+
+        self.assertEqual(200, response.status_code, response.content)
+
+
     def test_password_grant_public_json(self):
         c = self.get_client()
         c.client_type = 1 # public
@@ -372,6 +392,7 @@ class AccessTokenTest(BaseOAuth2TestCase):
         response = self.client.post(self.access_token_url(), data=json.dumps({
                 'grant_type': 'password',
                 'client_id': c.client_id,
+                'client_secret': c.client_secret,
                 # No secret needed
                 'username': self.get_user().username,
                 'password': self.get_password(),

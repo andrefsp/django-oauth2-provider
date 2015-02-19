@@ -1,5 +1,8 @@
+import requests
+import json
 from django import forms
 from django.contrib.auth import authenticate
+from django.contrib.auth import get_user_model
 from django.utils.encoding import smart_unicode
 from django.utils.translation import ugettext as _
 from .. import scope
@@ -268,6 +271,44 @@ class AuthorizationCodeGrantForm(ScopeMixin, OAuthForm):
         if want_scope is not 0 and not scope.check(want_scope, has_scope):
             raise OAuthValidationError({'error': 'invalid_scope'})
 
+        return data
+
+
+class FacebookAccessTokenForm(ScopeMixin, OAuthForm):
+    """
+    Validate the given facebook_id and facebook_access_token
+    are valid
+    """
+    facebook_graph_url = "https://graph.facebook.com/me?access_token=%s"
+
+    facebook_access_token = forms.CharField(required=True)
+    facebook_id = forms.CharField(required=True)
+
+    def clean(self):
+        data = self.cleaned_data
+        facebook_access_token = data['facebook_access_token']
+        facebook_id = data['facebook_id']
+
+        url = self.facebook_graph_url % facebook_access_token
+
+        response = requests.get(url)
+
+        if response.status_code != 200:
+            raise OAuthValidationError({'error': 'invalid_grant'})
+
+        response_data = json.loads(response.content)
+
+        if str(response_data['id']) != facebook_id:
+            raise OAuthValidationError({'error': 'invalid_grant'})
+
+        User = get_user_model()
+
+        try:
+            user = User.objects.get(facebook_id=facebook_id)
+        except User.DoesNotExist:
+            raise OAuthValidationError({'error': 'invalid_grant'})
+
+        data['user'] = user
         return data
 
 

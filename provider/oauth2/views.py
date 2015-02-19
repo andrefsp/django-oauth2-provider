@@ -6,7 +6,7 @@ from ..views import AccessToken as AccessTokenView, RevokeToken as RevokeTokenVi
 from ..utils import now
 from .forms import AuthorizationRequestForm, AuthorizationForm
 from .forms import PasswordGrantForm, RefreshTokenGrantForm
-from .forms import AuthorizationCodeGrantForm
+from .forms import AuthorizationCodeGrantForm, FacebookAccessTokenForm
 from .models import Client, RefreshToken, AccessToken
 from .backends import BasicClientBackend, RequestParamsClientBackend, PublicPasswordBackend, AccessTokenBackend
 
@@ -104,6 +104,12 @@ class AccessTokenView(AccessTokenView):
         if not form.is_valid():
             raise OAuthError(form.errors)
         return form.cleaned_data.get('refresh_token')
+
+    def get_facebook_access_token_grant(self, request, data, client):
+        form = FacebookAccessTokenForm(data, client=client)
+        if not form.is_valid():
+            raise OAuthError(form.errors)
+        return form.cleaned_data
 
     def get_password_grant(self, request, data, client):
         form = PasswordGrantForm(data, client=client)
