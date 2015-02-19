@@ -283,6 +283,7 @@ class FacebookAccessTokenForm(ScopeMixin, OAuthForm):
 
     facebook_access_token = forms.CharField(required=True)
     facebook_id = forms.CharField(required=True)
+    scope = ScopeChoiceField(choices=SCOPE_NAMES, required=False)
 
     def clean(self):
         data = self.cleaned_data
