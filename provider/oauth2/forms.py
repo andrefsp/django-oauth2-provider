@@ -287,8 +287,13 @@ class FacebookAccessTokenForm(ScopeMixin, OAuthForm):
 
     def clean(self):
         data = self.cleaned_data
-        facebook_access_token = data['facebook_access_token']
-        facebook_id = data['facebook_id']
+        facebook_access_token = data.get('facebook_access_token')
+        facebook_id = data.get('facebook_id')
+        if not facebook_id or not facebook_access_token:
+            raise OAuthValidationError({'error': 'invalid_grant',
+                        'error_message':'facebook_access_token and '
+                                        'facebook_id required'})
+
 
         url = self.facebook_graph_url % facebook_access_token
 
