@@ -349,7 +349,8 @@ class PasswordGrantForm(ScopeMixin, OAuthForm):
             password=data.get('password'))
 
         if user is None:
-            raise OAuthValidationError({'error': 'invalid_grant'})
+            raise OAuthValidationError({'error': 'invalid_grant',
+                                        'error_message': 'Invalid credentials'})
 
         data['user'] = user
         return data
