@@ -1,5 +1,8 @@
+import requests
+import json
 from django import forms
 from django.contrib.auth import authenticate
+from django.contrib.auth import get_user_model
 from django.utils.encoding import smart_unicode
 from django.utils.translation import ugettext as _
 from .. import scope
@@ -271,6 +274,50 @@ class AuthorizationCodeGrantForm(ScopeMixin, OAuthForm):
         return data
 
 
+class FacebookAccessTokenForm(ScopeMixin, OAuthForm):
+    """
+    Validate the given facebook_id and facebook_access_token
+    are valid
+    """
+    facebook_graph_url = "https://graph.facebook.com/me?access_token=%s"
+
+    facebook_access_token = forms.CharField(required=True)
+    facebook_id = forms.CharField(required=True)
+    scope = ScopeChoiceField(choices=SCOPE_NAMES, required=False)
+
+    def clean(self):
+        data = self.cleaned_data
+        facebook_access_token = data.get('facebook_access_token')
+        facebook_id = data.get('facebook_id')
+        if not facebook_id or not facebook_access_token:
+            raise OAuthValidationError({'error': 'invalid_grant',
+                        'error_message':'facebook_access_token and '
+                                        'facebook_id required'})
+
+
+        url = self.facebook_graph_url % facebook_access_token
+
+        response = requests.get(url)
+
+        if response.status_code != 200:
+            raise OAuthValidationError({'error': 'invalid_grant'})
+
+        response_data = json.loads(response.content)
+
+        if str(response_data['id']) != facebook_id:
+            raise OAuthValidationError({'error': 'invalid_grant'})
+
+        User = get_user_model()
+
+        try:
+            user = User.objects.get(facebook_id=facebook_id)
+        except User.DoesNotExist:
+            raise OAuthValidationError({'error': 'invalid_grant'})
+
+        data['user'] = user
+        return data
+
+
 class PasswordGrantForm(ScopeMixin, OAuthForm):
     """
     Validate the password of a user on a password grant request.
@@ -302,7 +349,8 @@ class PasswordGrantForm(ScopeMixin, OAuthForm):
             password=data.get('password'))
 
         if user is None:
-            raise OAuthValidationError({'error': 'invalid_grant'})
+            raise OAuthValidationError({'error': 'invalid_grant',
+                                        'error_message': 'Invalid credentials'})
 
         data['user'] = user
         return data
