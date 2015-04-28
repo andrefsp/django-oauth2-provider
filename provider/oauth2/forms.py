@@ -285,7 +285,7 @@ class PasswordGrantForm(ScopeMixin, OAuthForm):
         if not username:
             raise OAuthValidationError({'error': 'invalid_request'})
 
-        return username
+        return username.lower()
 
     def clean_password(self):
         password = self.cleaned_data.get('password')
